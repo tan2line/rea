@@ -1,6 +1,8 @@
 // Deterministic, fail-closed grading. Same profile -> same decision.
 // Vocabulary follows the encoded-governance warrant model: effect classes map to
 // warrant action classes; credential status gates whether a warrant may be issued.
+import { categorize } from "./effects.mjs";
+
 export const EFFECT_CLASSES = [
   "process_spawn",
   "filesystem_write",
@@ -81,11 +83,40 @@ export function grade(profile) {
     );
   if (
     eff.imports.some((i) =>
-      i.specifier.startsWith('@modelcontextprotocol/sdk/client'),
+      i.specifier.startsWith("@modelcontextprotocol/sdk/client"),
     ) ||
     profile.package?.name === "mcp-remote"
   )
     set("remote_mcp_proxy", "uses MCP client SDK (forwards to another server)");
+  // Declared dependencies are package.json facts: a dependency whose category implies an
+  // effect sets the flag even when the package's own files never call it directly.
+  const deps = Object.keys(profile.package?.dependencies ?? {});
+  const depCats = new Map();
+  for (const d of deps) {
+    const c = categorize(d);
+    if (!depCats.has(c)) depCats.set(c, []);
+    depCats.get(c).push(d);
+  }
+  const depFlag = (cat, flag) => {
+    if (depCats.has(cat))
+      set(
+        flag,
+        `declared dependency: ${depCats.get(cat).slice(0, 4).join(", ")}`,
+      );
+  };
+  depFlag("process", "process_spawn");
+  depFlag("browser_automation", "browser_automation");
+  depFlag("dynamic_code", "dynamic_code");
+  depFlag("native_addon", "native_addon");
+  depFlag("network", "network_egress");
+  depFlag("network_sdk", "network_egress");
+  if (
+    deps.some((d) => /^@modelcontextprotocol\/sdk$/.test(d)) &&
+    eff.imports.some((i) =>
+      i.specifier.startsWith('@modelcontextprotocol/sdk/client'),
+    )
+  )
+    set("remote_mcp_proxy", "uses MCP client SDK");
   const secretEnv = Object.keys(eff.env_vars).filter((n) => SECRET_ENV.test(n));
   if (secretEnv.length)
     set(
@@ -122,8 +153,12 @@ export function grade(profile) {
         `REA_INTEGRITY_CONTRADICTIONS: ${rea.integrity_contradictions.length}`,
       );
   }
-  const depCount = Object.keys(profile.package?.dependencies ?? {}).length;
+  const depCount = deps.length;
   unknowns.push(`TRANSITIVE_DEPENDENCIES_UNSCANNED: ${depCount} declared`);
+  if (eff.bytes_scanned < 6000 && depCount > 0)
+    unknowns.push(
+      `THIN_WRAPPER: ${eff.bytes_scanned} bytes of own code; behavior lives in ${depCount} dependencies`,
+    );
 
   // Risk tier (highest applicable wins).
   let tier = 0;

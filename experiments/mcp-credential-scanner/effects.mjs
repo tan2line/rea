@@ -87,7 +87,7 @@ const VM_CALLS = new Set([
 ]);
 const URL_RE = /\b(https?|wss?):\/\/([A-Za-z0-9.-]+(?::\d+)?)([^\s"'`<>)\]]*)/g;
 
-function categorize(spec) {
+export function categorize(spec) {
   for (const [cat, re] of MODULE_CATEGORIES) if (re.test(spec)) return cat;
   if (spec.startsWith("node:") || isNodeBuiltin(spec)) return "node_builtin";
   if (spec.startsWith(".") || spec.startsWith("/")) return "local";
