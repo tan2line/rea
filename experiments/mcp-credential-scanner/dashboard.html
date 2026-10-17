@@ -1,0 +1,241 @@
+<style>
+  .mx { font-family: var(--font-anthropic-sans); color: var(--color-fg); display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+  .mx h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+  .mx .mx-takeaway { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); margin: 0; max-width: 70ch; }
+  .mx .mx-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--cds-gap-md); }
+  .mx .mx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  .mx .mx-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); }
+  .mx .mx-card .mx-note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); margin: 0 0 var(--cds-gap-md); }
+  .mx .mx-tile .mx-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .mx .mx-tile .mx-value { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 2.25rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .mx .mx-tile .mx-sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .mx .mx-tile.mx-bad .mx-value { color: var(--color-bad); }
+  .mx .mx-tile.mx-ok .mx-value { color: var(--color-ok); }
+  .mx .mx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--cds-gap-md); }
+  .mx .mx-chart { position: relative; min-height: 15rem; }
+  .mx .mx-chart svg { display: block; width: 100%; height: auto; }
+  .mx .mx-chart text { fill: var(--color-fg-muted); font-size: var(--cds-font-size-caption); font-family: var(--font-anthropic-sans); }
+  .mx .mx-chart .mx-val { fill: var(--color-fg); font-variant-numeric: tabular-nums; }
+  .mx .mx-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+  .mx .mx-tip .mx-tip-k { color: var(--cds-text-secondary); }
+  .mx .mx-toolbar { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; margin-bottom: var(--cds-gap-md); }
+  .mx .mx-toolbar input { font: inherit; padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); min-width: 14rem; }
+  .mx .mx-tablebox { max-height: 40rem; overflow: auto; }
+  .mx table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+  .mx th { position: sticky; top: 0; background: var(--color-panel); text-align: left; padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .mx th button { all: unset; cursor: pointer; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .mx th button:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .mx th[aria-sort="ascending"] button::after { content: " ↑"; }
+  .mx th[aria-sort="descending"] button::after { content: " ↓"; }
+  .mx td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+  .mx td.mx-num { text-align: right; }
+  .mx .mx-pkg { font-weight: var(--cds-font-weight-medium); word-break: break-all; }
+  .mx .mx-ver { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .mx .mx-bar { position: relative; min-width: 7rem; }
+  .mx .mx-bar i { position: absolute; left: 0; top: 50%; height: 0.5rem; margin-top: -0.25rem; border-radius: 4px; background: var(--cds-chart-muted); z-index: 0; }
+  .mx .mx-bar b { position: relative; z-index: 1; font-weight: 400; padding-left: 0.25rem; }
+  .mx .mx-chip { display: inline-block; font-size: var(--cds-font-size-caption); padding: 0 0.4rem; border-radius: 999px; border: 1px solid var(--color-border-line); margin: 0 0.2rem 0.2rem 0; white-space: nowrap; }
+  .mx .mx-chip.mx-hot { border-color: var(--color-bad); color: var(--color-bad); }
+  .mx .mx-chip.mx-warm { border-color: var(--color-warn); color: var(--color-warn); }
+  .mx .mx-cred-PROVISIONAL { color: var(--color-ok); }
+  .mx .mx-cred-RESTRICTED { color: var(--color-bad); }
+  .mx .mx-cred-PENDING_VALIDATION { color: var(--color-warn); }
+  .mx .mx-tier { font-weight: var(--cds-font-weight-medium); }
+  .mx .mx-narrow { display: none; }
+  @media (min-width: 60rem) { .mx .mx-narrow { display: table-cell; } }
+  .mx .mx-method { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 80ch; }
+  .mx .mx-method p { margin: 0 0 var(--cds-gap-xs); }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+<div class="mx">
+  <header id="overview">
+    <h1>MCP Server Effect Profiles</h1>
+    <p class="mx-takeaway dash-skeleton" id="takeaway" data-source="headline">—</p>
+  </header>
+
+  <section class="mx-tiles" id="headline-tiles">
+    <div class="mx-card mx-tile"><div class="mx-label">Servers scanned</div><div class="mx-value dash-skeleton" data-source="headline" data-field="scanned">—</div><div class="mx-sub">npm packages, own code only</div></div>
+    <div class="mx-card mx-tile mx-bad"><div class="mx-label">Can spawn processes</div><div class="mx-value dash-skeleton" data-source="headline" data-field="spawn">—</div><div class="mx-sub">exec, spawn or fork call sites</div></div>
+    <div class="mx-card mx-tile mx-bad"><div class="mx-label">Run code at install</div><div class="mx-value dash-skeleton" data-source="headline" data-field="install">—</div><div class="mx-sub">preinstall, install or postinstall</div></div>
+    <div class="mx-card mx-tile"><div class="mx-label">Reach the network</div><div class="mx-value dash-skeleton" data-source="headline" data-field="network">—</div><div class="mx-sub">request sites or literal hosts</div></div>
+    <div class="mx-card mx-tile mx-ok"><div class="mx-label">Provisional credential</div><div class="mx-value dash-skeleton" data-source="headline" data-field="provisional">—</div><div class="mx-sub">eligible for a warrant now</div></div>
+    <div class="mx-card mx-tile mx-bad"><div class="mx-label">Restricted</div><div class="mx-value dash-skeleton" data-source="headline" data-field="restricted">—</div><div class="mx-sub">needs human scope decision</div></div>
+  </section>
+
+  <section class="mx-grid">
+    <div class="mx-card" id="effects-chart">
+      <h2>How many servers carry each effect</h2>
+      <p class="mx-note">Static candidates in the package's own shipped code. Each bar counts servers, not call sites.</p>
+      <div class="mx-chart dash-skeleton" data-source="effect_prevalence"></div>
+    </div>
+    <div class="mx-card" id="tier-chart">
+      <h2>Risk tier distribution</h2>
+      <p class="mx-note">T0 pure compute, T1 network-bound, T2 local-mutating, T3 code-executing, T4 install-time executing. Highest applicable effect wins.</p>
+      <div class="mx-chart dash-skeleton" data-source="tier_counts"></div>
+    </div>
+  </section>
+
+  <section class="mx-card" id="servers">
+    <h2>Every scanned server</h2>
+    <p class="mx-note">Sorted by weekly npm downloads. Click a heading to sort. Effects link to the first call site in the detail report.</p>
+    <div class="mx-toolbar"><input id="mx-search" type="search" placeholder="Filter by package, host, effect or credential" aria-label="Filter servers"></div>
+    <div class="mx-tablebox">
+      <table id="mx-table" data-source="profiles" data-row-key="package">
+        <thead><tr>
+          <th data-field="package"><button data-sort="package">Package</button></th>
+          <th data-field="weekly_downloads"><button data-sort="weekly_downloads">Weekly downloads</button></th>
+          <th data-field="risk_tier"><button data-sort="risk_tier">Tier</button></th>
+          <th data-field="credential"><button data-sort="credential">Credential</button></th>
+          <th data-source="effect_summary" data-field="effects"><button data-sort="effect_count">Effects</button></th>
+          <th class="mx-narrow" data-field="external_hosts"><button data-sort="external_hosts">Hosts</button></th>
+          <th class="mx-narrow" data-field="secret_env_vars"><button data-sort="secret_env_vars">Secret env</button></th>
+          <th class="mx-narrow" data-field="declared_tools"><button data-sort="declared_tools">Tools</button></th>
+          <th class="mx-narrow" data-field="unknowns"><button data-sort="unknowns">Unknowns</button></th>
+          <th class="mx-narrow" data-field="license"><button data-sort="license">License</button></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mx-method" id="method">
+    <p>Method: each package tarball was downloaded from npm and analyzed with REA (static JavaScript application analysis, which produced the Evidence record cited per row) plus a scanner-owned syntax pass that records process spawns, filesystem writes, network requests, dynamic code, environment reads and literal hosts with file and line. Grading is deterministic and fails closed: unresolved unknowns or code-executing effects yield Restricted, and a human issuer is always required for full privileges.</p>
+    <p>Limits: findings are source-syntax candidates, not proof of runtime behavior. Only the package's own files were scanned, so a thin wrapper grades on its wrapper code and declared dependencies count as an unknown. Minified bundles degrade effect recovery and are flagged.</p>
+  </section>
+</div>
+<script>
+  const EFFECTS = [
+    ["process_spawn", "Spawns processes", "hot"], ["install_scripts", "Install scripts", "hot"], ["dynamic_code", "Dynamic code", "hot"], ["browser_automation", "Drives a browser", "hot"], ["native_addon", "Native add-on", "hot"],
+    ["filesystem_write", "Writes files", "warm"], ["remote_mcp_proxy", "Proxies MCP", "warm"], ["secret_env_access", "Reads secrets", "warm"], ["network_egress", "Network egress", ""],
+  ];
+  const yes = (v) => v === true || v === "true" || v === 1 || v === "1";
+  const num = (v) => Number(v) || 0;
+
+  dash.calc("headline", {
+    title: "Headline counts",
+    description: "Counts of scanned servers by effect flag and credential status.",
+    inputs: ["profiles"],
+    fn: (profiles) => {
+      const yes = (v) => v === true || v === "true";
+      return {
+        scanned: profiles.length,
+        spawn: profiles.filter((r) => yes(r.process_spawn)).length,
+        install: profiles.filter((r) => yes(r.install_scripts)).length,
+        network: profiles.filter((r) => yes(r.network_egress)).length,
+        provisional: profiles.filter((r) => r.credential === "PROVISIONAL").length,
+        restricted: profiles.filter((r) => r.credential === "RESTRICTED").length,
+      };
+    },
+  });
+  dash.calc("effect_prevalence", {
+    title: "Servers per effect class",
+    description: "For each effect class, how many scanned servers carry it.",
+    inputs: ["profiles"],
+    fn: (profiles) => {
+      const yes = (v) => v === true || v === "true";
+      const classes = ["process_spawn", "install_scripts", "dynamic_code", "browser_automation", "native_addon", "filesystem_write", "remote_mcp_proxy", "secret_env_access", "network_egress"];
+      return classes.map((effect) => ({ effect, count: profiles.filter((r) => yes(r[effect])).length }));
+    },
+  });
+  dash.calc("tier_counts", {
+    title: "Servers per risk tier",
+    description: "How many scanned servers fall in each risk tier T0 to T4.",
+    inputs: ["profiles"],
+    fn: (profiles) => ["T0", "T1", "T2", "T3", "T4"].map((tier) => ({ tier, count: profiles.filter((r) => r.risk_tier === tier).length })),
+  });
+  dash.calc("effect_summary", {
+    title: "Effect flags per server",
+    description: "The set of effect flags each server carries, as one text cell.",
+    inputs: ["profiles"],
+    fn: (profiles) => {
+      const yes = (v) => v === true || v === "true";
+      const classes = ["process_spawn", "install_scripts", "dynamic_code", "browser_automation", "native_addon", "filesystem_write", "remote_mcp_proxy", "secret_env_access", "network_egress"];
+      return profiles.map((r) => ({ package: r.package, effects: classes.filter((c) => yes(r[c])).join(", ") }));
+    },
+  });
+
+  const fmtInt = d3.format(",");
+  const fmtCompact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+  const EFFECT_LABEL = Object.fromEntries(EFFECTS.map(([k, l]) => [k, l]));
+  const EFFECT_HEAT = Object.fromEntries(EFFECTS.map(([k, , h]) => [k, h]));
+
+  function drawBars(container, rows, keyField, labelOf, sourceName) {
+    const width = container.clientWidth;
+    if (!width || !rows.length) return;
+    const rowH = 28, margin = { top: 4, right: 48, bottom: 4, left: 4 };
+    const labelW = Math.min(180, Math.max(...rows.map((r) => labelOf(r).length)) * 7 + 8);
+    const height = margin.top + margin.bottom + rows.length * rowH;
+    const x = d3.scaleLinear([0, Math.max(1, d3.max(rows, (r) => num(r.count)))], [margin.left + labelW, width - margin.right]);
+    const y = d3.scaleBand(rows.map((r) => r[keyField]), [margin.top, height - margin.bottom]).padding(0.3);
+    container.replaceChildren();
+    const svg = d3.select(container).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${width} ${height}`).attr("role", "img").attr("aria-label", sourceName);
+    const tip = d3.select(container).append("div").attr("class", "mx-tip").style("display", "none");
+    const g = svg.selectAll("g.mx-row").data(rows).join("g").attr("class", "mx-row");
+    g.append("text").attr("x", margin.left).attr("y", (r) => y(r[keyField]) + y.bandwidth() / 2).attr("dominant-baseline", "middle").text(labelOf);
+    g.append("rect").attr("x", x(0)).attr("y", (r) => y(r[keyField])).attr("height", y.bandwidth()).attr("width", (r) => Math.max(0, x(num(r.count)) - x(0))).attr("rx", 4)
+      .attr("fill", (r) => (EFFECT_HEAT[r[keyField]] === "hot" || r[keyField] === "T3" || r[keyField] === "T4") ? "var(--cds-chart-status-critical)" : dash.colors[0])
+      .on("pointermove", (event, r) => { const [px, py] = d3.pointer(event, container); tip.style("display", "block").style("left", Math.min(px + 12, width - 160) + "px").style("top", (py - 8) + "px").html(""); tip.append("span").attr("class", "mx-tip-k").text(labelOf(r) + ": "); tip.append("span").text(fmtInt(num(r.count)) + " servers"); })
+      .on("pointerleave", () => tip.style("display", "none"));
+    g.append("text").attr("class", "mx-val").attr("x", (r) => x(num(r.count)) + 6).attr("y", (r) => y(r[keyField]) + y.bandwidth() / 2).attr("dominant-baseline", "middle").text((r) => fmtInt(num(r.count)));
+  }
+
+  const state = { sort: "weekly_downloads", dir: -1, q: "" };
+  const search = document.getElementById("mx-search");
+  search.addEventListener("input", () => { state.q = search.value.trim().toLowerCase(); render(); });
+  for (const btn of document.querySelectorAll("#mx-table th button")) btn.addEventListener("click", () => {
+    const k = btn.dataset.sort;
+    if (state.sort === k) state.dir = -state.dir; else { state.sort = k; state.dir = typeof lastRows[0]?.[k] === "string" && !["weekly_downloads"].includes(k) ? 1 : -1; }
+    render();
+  });
+  let lastRows = [];
+
+  function renderTable(rows) {
+    for (const th of document.querySelectorAll("#mx-table th")) { const b = th.querySelector("button"); th.setAttribute("aria-sort", b && b.dataset.sort === state.sort ? (state.dir > 0 ? "ascending" : "descending") : "none"); }
+    const maxDl = d3.max(rows, (r) => num(r.weekly_downloads)) || 1;
+    const q = state.q;
+    let shown = rows.filter((r) => !q || [r.package, r.external_host_list, r.credential, r.risk_tier, r.license, r.secret_env_list, EFFECTS.filter(([k]) => yes(r[k])).map(([, l]) => l).join(" ")].join(" ").toLowerCase().includes(q));
+    const k = state.sort;
+    shown = shown.slice().sort((a, b) => { const av = a[k], bv = b[k]; const an = Number(av), bn = Number(bv); const c = Number.isFinite(an) && Number.isFinite(bn) && av !== "" && bv !== "" ? an - bn : String(av).localeCompare(String(bv)); return c * state.dir; });
+    const tbody = document.querySelector("#mx-table tbody");
+    tbody.replaceChildren();
+    for (const r of shown) {
+      const tr = document.createElement("tr"); tr.dataset.key = r.package;
+      const td = (cls, fill) => { const c = document.createElement("td"); if (cls) c.className = cls; fill(c); tr.appendChild(c); };
+      td("", (c) => { const s = document.createElement("span"); s.className = "mx-pkg"; s.textContent = r.package; c.appendChild(s); const v = document.createElement("div"); v.className = "mx-ver"; v.textContent = `v${r.version}`; c.appendChild(v); });
+      td("mx-bar", (c) => { const i = document.createElement("i"); i.style.width = (100 * num(r.weekly_downloads) / maxDl).toFixed(1) + "%"; const b = document.createElement("b"); b.textContent = fmtCompact.format(num(r.weekly_downloads)); c.append(i, b); });
+      td("mx-tier", (c) => { c.textContent = r.risk_tier; c.title = r.risk_tier_name; });
+      td("mx-cred-" + r.credential, (c) => { c.textContent = r.credential.replace("_", " ").toLowerCase(); c.title = r.credential_reason; });
+      td("", (c) => { for (const [key, label, heat] of EFFECTS) if (yes(r[key])) { const s = document.createElement("span"); s.className = "mx-chip" + (heat ? " mx-" + heat : ""); s.textContent = label; if (key === "process_spawn" && r.first_spawn_site) s.title = r.first_spawn_site; if (key === "install_scripts" && r.install_script) s.title = r.install_script; c.appendChild(s); } });
+      td("mx-num mx-narrow", (c) => { c.textContent = fmtInt(num(r.external_hosts)); c.title = r.external_host_list || ""; });
+      td("mx-num mx-narrow", (c) => { c.textContent = fmtInt(num(r.secret_env_vars)); c.title = r.secret_env_list || ""; });
+      td("mx-num mx-narrow", (c) => { c.textContent = fmtInt(num(r.declared_tools)); });
+      td("mx-num mx-narrow", (c) => { c.textContent = fmtInt(num(r.unknowns)); c.title = r.unknown_list || ""; });
+      td("mx-narrow", (c) => { c.textContent = r.license; });
+      tbody.appendChild(tr);
+    }
+  }
+
+  function setText(sel, value) { for (const el of document.querySelectorAll(sel)) { el.textContent = value; el.classList.remove("dash-skeleton"); } }
+
+  function render() {
+    const profiles = dash.data("profiles");
+    const headline = dash.data("headline");
+    if (headline.status === "ok" && headline.data) {
+      const h = headline.data;
+      for (const k of ["scanned", "spawn", "install", "network", "provisional", "restricted"]) setText(`[data-source="headline"][data-field="${k}"]`, fmtInt(num(h[k])));
+      const t = document.getElementById("takeaway");
+      t.textContent = `${fmtInt(num(h.spawn))} of ${fmtInt(num(h.scanned))} popular MCP servers can spawn processes and ${fmtInt(num(h.install))} run code at install time. Only ${fmtInt(num(h.provisional))} qualify for a provisional credential from static evidence alone; the other ${fmtInt(num(h.restricted))} need a human scope decision before an agent is warranted to use them.`;
+      t.classList.remove("dash-skeleton");
+    }
+    const prev = dash.data("effect_prevalence");
+    const pc = document.querySelector('[data-source="effect_prevalence"]');
+    if (prev.status === "ok" && prev.data?.length) { pc.classList.remove("dash-skeleton"); drawBars(pc, prev.data, "effect", (r) => EFFECT_LABEL[r.effect] ?? r.effect, "Servers per effect class"); }
+    const tiers = dash.data("tier_counts");
+    const tc = document.querySelector('[data-source="tier_counts"]');
+    if (tiers.status === "ok" && tiers.data?.length) { tc.classList.remove("dash-skeleton"); drawBars(tc, tiers.data, "tier", (r) => r.tier, "Servers per risk tier"); }
+    if (profiles.status === "ok") { lastRows = profiles.data; renderTable(profiles.data); }
+    else if (profiles.status === "error") { const tbody = document.querySelector("#mx-table tbody"); tbody.replaceChildren(); }
+  }
+  dash.onData(render);
+</script>
